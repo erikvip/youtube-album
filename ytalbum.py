@@ -1,18 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-__version__ = '0.1.1'
-
-__authors__ = (
-	'Erik Phillips'
-)
-
-__license__ = 'GPL'
+__version__ = "0.1.1"
+__author__ = "Erik Phillips <erikvip@gmail.com>"
+__license__ = "GPLv3"
 
 
 import os
 import sys
 import pprint
 import requests
+from PyQt4 import QtGui
 
 # Ensure lib added to path, before any other imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
@@ -20,7 +17,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
 # Included libs
 import musicbrainzngs as mb
 import pafy
+import ytalbumgui as gui
 from feedparser import *
+
 
 def main():
 
@@ -84,4 +83,16 @@ def main():
 
 # main() when invoked from the shell
 if __name__ == '__main__':
+
 	main()
+'''
+	app = QtGui.QApplication(sys.argv)
+
+	main_window = gui.YtAlbumGuiMain()
+	main_window.show()
+	# Enter the main loop
+	app.exec_()
+'''
+
+
+	
