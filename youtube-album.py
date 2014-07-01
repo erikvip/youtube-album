@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 __authors__ = (
 	'Erik Phillips'
@@ -17,7 +17,7 @@ import requests
 # Ensure lib added to path, before any other imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
 
-# import mb
+# Included libs
 import musicbrainzngs as mb
 import pafy
 from feedparser import *
@@ -30,23 +30,17 @@ def main():
 	name = 'Aphex Twin classics'
 	limit = 5
 
-
 	chars = set('!?*')
 	if any((c in chars) for c in name):
 	    name = '"'+name+'"'
 	    
-
 	mb.set_useragent("headphones","0.0","https://github.com/rembo10/headphones")
 	res = mb.search_releases(query='artist:'+name,limit=limit)
-
-
 
 	for a in res['release-list']:
 		print a['id'], a['title'], a['artist-credit-phrase'], a['date'], a['country'], a['status']
 
-
 		disc = mb.get_release_by_id(a['id'], ["media","recordings"])
-		#pprint.pprint(disc)
 
 		for d in disc['release']['medium-list']:
 			for t in d['track-list']:
@@ -85,13 +79,8 @@ def main():
 
 					print audiofile
 
-
-#					pprint.pprint(vid.audiostreams)
-
 					exit(1)
 				exit(1)
-
-
 
 # main() when invoked from the shell
 if __name__ == '__main__':
