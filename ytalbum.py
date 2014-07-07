@@ -27,9 +27,15 @@ logging.basicConfig(level=logging.INFO)
 
 def main():
 	yta = YtAlbum()
-	yta.query = 'Aphex twin selected ambient works'
+	yta.query = 'Aphex twin On'
 	res = yta.findRelease()
-	pprint.pprint(res)
+
+	#print res['title']
+
+	for r in res:
+		print r['title']
+	#	pprint.pprint(r)
+	#pprint.pprint(res)
 
 class YtAlbum:
 
@@ -39,6 +45,7 @@ class YtAlbum:
 		#artistResults = None
 
 		name = self.query
+		
 		results = []
 
 		#name = 'Aphex Twin classics'
@@ -62,7 +69,7 @@ class YtAlbum:
 				'title' : a['title'],
 				'tracks' : []
 			}
-
+			
 			logging.info('Found release: \n\
 				Artist: %(artist)s \n\
 				Title: %(title)s \n\
@@ -86,7 +93,7 @@ class YtAlbum:
 
 					# Youtube Search API URL
 					url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
-					print url
+					#print url
 
 					track = {
 						'position': str(t['position']), 

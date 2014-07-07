@@ -16,9 +16,10 @@ import ytalbum
 
 class YtAlbumGuiMain(QtGui.QMainWindow):
 
-	ytAlbum = {}
+	#ytAlbum = {}
 
 	def __init__(self, win_parent = None):
+
 		#Init the base class
 		QtGui.QMainWindow.__init__(self, win_parent)
 
@@ -34,33 +35,33 @@ class YtAlbumGuiMain(QtGui.QMainWindow):
 		self.artist_edit = QtGui.QLineEdit()
 		self.artist_button = QtGui.QPushButton("Find")
 
+		# Data Table		
+		self.table = QtGui.QTableWidget(0, 0, self)
 
-		
-		self.table = QtGui.QTableWidget(3, 3, self)
-
-		# Disable editing
+		# Disable editing 
 		self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
 
+
 		#self.table.setRowCount(1)
-		#self.table.setColumnCount(1)
+		self.table.setColumnCount(6)
 
 		# Build the table headers
-		self.table.setHorizontalHeaderLabels(['Artist', 'Album', 'Country'])
+		self.table.setHorizontalHeaderLabels(['Artist', 'Album', 'Country', '#', 'Title', 'Source'])
 
-		self.table.setItem(0,0, QtGui.QTableWidgetItem('Aphex'))
-		self.table.setItem(0,1, QtGui.QTableWidgetItem('Alasdfasdf'))
-		widget = QtGui.QTableWidgetItem('Test')
+#		self.table.setItem(0,0, QtGui.QTableWidgetItem('Aphex'))
+#		self.table.setItem(0,1, QtGui.QTableWidgetItem('Alasdfasdf'))
+#		widget = QtGui.QTableWidgetItem('Test')
 		#widget.setBackgroundColor(QtCore.Qt.red)
-		widget.setIcon(QtGui.QIcon(QtCore.QString('https://google.com/favicon.ico')))
+#		widget.setIcon(QtGui.QIcon(QtCore.QString('https://google.com/favicon.ico')))
 		#widget.setStyleSheet("""
 		#	""")
 
-		self.table.setItem(0,2, widget)
+#		self.table.setItem(0,2, widget)
 
 		url = "http://www.google.com/favicon.ico"; 
 		#Queue = QNetworkAccessManager()
-		def finishImageLoad(v):
-			print "asdfadsf"
+#		def finishImageLoad(v):
+#			print "asdfadsf"
 
 		#Queue.finished.connect(finishImageLoad)
 		#Queue.get(QNetworkRequest(QUrl(url)))
@@ -100,7 +101,48 @@ class YtAlbumGuiMain(QtGui.QMainWindow):
 	def findArtistHandler(self):
 		artist = self.artist_edit.displayText()
 
-		self.ytAlbum['artist'] = artist
+		#self.ytAlbum['artist'] = artist
+
+#		self.table.setItem(0,0, QtGui.QTableWidgetItem('Aphex'))
+#		self.table.setItem(0,1, QtGui.QTableWidgetItem('Alasdfasdf'))
+#		self.table.setItem(0,1, QtGui.QTableWidgetItem('Two'))
+
+		yta = ytalbum.YtAlbum()
+
+		yta.query = artist
+		res = yta.findRelease()
+
+		for r in res:
+			#print r.artist
+			self.table.insertRow( self.table.rowCount() )
+			self.table.setItem( self.table.rowCount()-1, 0, QtGui.QTableWidgetItem( r['artist'] ))
+			self.table.setItem( self.table.rowCount()-1, 1, QtGui.QTableWidgetItem( r['title']  ))
+			self.table.setItem( self.table.rowCount()-1, 2, QtGui.QTableWidgetItem( r['country'] ))
+
+			for t in r['tracks']:
+				self.table.insertRow( self.table.rowCount() )
+				self.table.setItem( self.table.rowCount()-1, 0, QtGui.QTableWidgetItem( r['artist'] ))
+				self.table.setItem( self.table.rowCount()-1, 1, QtGui.QTableWidgetItem( r['title']  ))
+				self.table.setItem( self.table.rowCount()-1, 2, QtGui.QTableWidgetItem( r['country'] ))
+				self.table.setItem( self.table.rowCount()-1, 3, QtGui.QTableWidgetItem( t['position'] ))
+				self.table.setItem( self.table.rowCount()-1, 4, QtGui.QTableWidgetItem( t['title'] ))
+
+				#pprint.pprint(t['sources'])
+
+				source = "Not Found!"
+				if t['sources'] != False:
+					if len(t['sources']) > 0:
+						src = QtGui.QTableWidgetItem( t['sources'][0]['url'] )
+					else:
+						src = QtGui.QTableWidgetItem( "Not Found!" )
+						src.setBackgroundColor(QtCore.Qt.red)
+				else:
+					src = QtGui.QTableWidgetItem( "Not Found!" )
+					src.setBackgroundColor(QtCore.Qt.red)
+
+				self.table.setItem( self.table.rowCount()-1, 5, src )
+
+
 
 
 
