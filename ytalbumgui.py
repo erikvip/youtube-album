@@ -9,6 +9,9 @@ import pprint
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
+from PyQt4.QtCore import QUrl
+from PyQt4.QtNetwork import QNetworkAccessManager, QNetworkRequest
+
 import ytalbum
 
 class YtAlbumGuiMain(QtGui.QMainWindow):
@@ -46,15 +49,24 @@ class YtAlbumGuiMain(QtGui.QMainWindow):
 
 		self.table.setItem(0,0, QtGui.QTableWidgetItem('Aphex'))
 		self.table.setItem(0,1, QtGui.QTableWidgetItem('Alasdfasdf'))
-		self.table.setItem(0,2, QtGui.QTableWidgetItem('US OF A'))
-		#layout = QtGui.QGridLayout(self.table)
+		widget = QtGui.QTableWidgetItem('Test')
+		#widget.setBackgroundColor(QtCore.Qt.red)
+		widget.setIcon(QtGui.QIcon(QtCore.QString('https://google.com/favicon.ico')))
+		#widget.setStyleSheet("""
+		#	""")
 
-#		self.setLayout( layout )
+		self.table.setItem(0,2, widget)
 
-#		self.gridWidget = QtGui.QWidget()
-#		self.gridLayout = QtGui.QGridLayout(self.gridWidget)
-#		self.gridLayout.addWidget( QtGui.QLabel('Album'), 0, 1 )
-#		self.gridLayout.addWidget( QtGui.QLabel('Album ID'), 0, 2 )
+		url = "http://www.google.com/favicon.ico"; 
+		#Queue = QNetworkAccessManager()
+		def finishImageLoad(v):
+			print "asdfadsf"
+
+		#Queue.finished.connect(finishImageLoad)
+		#Queue.get(QNetworkRequest(QUrl(url)))
+		#self.table.setItem(0,2, QtGui.QTableWidgetItem(QtGui.QIcon(url)) )
+
+
 
 		#Horizontal layout for Search Items
 		h_box = QtGui.QHBoxLayout()
@@ -81,9 +93,7 @@ class YtAlbumGuiMain(QtGui.QMainWindow):
 
 
 
-
-
-
+	
 
 
 # Search for artist and display albums
