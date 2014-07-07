@@ -26,119 +26,124 @@ logging.basicConfig(level=logging.INFO)
 
 
 def main():
-	res = findRelease('Aphex twin selected ambient works')
+	yta = YtAlbum()
+	yta.query = 'Aphex twin selected ambient works'
+	res = yta.findRelease()
 	pprint.pprint(res)
 
-def findRelease(name):
+class YtAlbum:
 
-	#artistlist = []
-	#artistResults = None
+	def findRelease(self):
 
-	results = []
+		#artistlist = []
+		#artistResults = None
 
-	#name = 'Aphex Twin classics'
-	limit = 1
+		name = self.query
+		results = []
 
-	chars = set('!?*')
-	if any((c in chars) for c in name):
-	    name = '"'+name+'"'
-	    
-	mb.set_useragent("YtAlbum","0.0","https://youtube.com")
-	res = mb.search_releases(query='artist:'+name,limit=limit)
+		#name = 'Aphex Twin classics'
+		limit = 1
 
-	for a in res['release-list']:
-		#print a['id'], a['title'], a['artist-credit-phrase'], a['date'], a['country'], a['status']
-		album = {
-			'id': a['id'], 
-			'artist': a['artist-credit-phrase'], 
-			'date': a['date'], 
-			'country': a['country'], 
-			'status': a['status'], 
-			'title' : a['title'],
-			'tracks' : []
-		}
+		chars = set('!?*')
+		if any((c in chars) for c in name):
+		    name = '"'+name+'"'
+		    
+		mb.set_useragent("YtAlbum","0.0","https://youtube.com")
+		res = mb.search_releases(query='artist:'+name,limit=limit)
 
-		logging.info('Found release: \n\
-			Artist: %(artist)s \n\
-			Title: %(title)s \n\
-			Album_id: %(id)s \n\
-			date: %(date)s country: %(country)s status: %(status)s' % album )
+		for a in res['release-list']:
+			#print a['id'], a['title'], a['artist-credit-phrase'], a['date'], a['country'], a['status']
+			album = {
+				'id': a['id'], 
+				'artist': a['artist-credit-phrase'], 
+				'date': a['date'], 
+				'country': a['country'], 
+				'status': a['status'], 
+				'title' : a['title'],
+				'tracks' : []
+			}
 
-		disc = mb.get_release_by_id(a['id'], ["media","recordings"])
+			logging.info('Found release: \n\
+				Artist: %(artist)s \n\
+				Title: %(title)s \n\
+				Album_id: %(id)s \n\
+				date: %(date)s country: %(country)s status: %(status)s' % album )
 
-		for d in disc['release']['medium-list']:
-			#pprint.pprint(d)
-			for t in d['track-list']:
-				# Convert recording time to Minutes:Seconds
-				time = int(t['length']) / 1000
-				minutes = time/60
-				seconds = str(time%60)[:2].zfill(2)
-				
-				# Cover art
-				#coverartarchive.org/release/95069c41-9f93-4473-a4a7-8722f14fb2c4/back
+			disc = mb.get_release_by_id(a['id'], ["media","recordings"])
 
-				query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
+			for d in disc['release']['medium-list']:
+				#pprint.pprint(d)
+				for t in d['track-list']:
+					# Convert recording time to Minutes:Seconds
+					time = int(t['length']) / 1000
+					minutes = time/60
+					seconds = str(time%60)[:2].zfill(2)
+					
+					# Cover art
+					#coverartarchive.org/release/95069c41-9f93-4473-a4a7-8722f14fb2c4/back
 
-				# Youtube Search API URL
-				url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
-				print url
+					query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
 
-				track = {
-					'position': str(t['position']), 
-					'title' : t['recording']['title'].encode('ascii', 'ignore'),
-					'duration' : "%i:%s" % (minutes, seconds), 
-					'seconds' : time, 
-					'api_url' : url
-				}
+					# Youtube Search API URL
+					url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
+					print url
 
-				logging.info('Track #%(position)s \tDuration: %(duration)s [%(seconds)ss] \t%(title)s \tAPI URL: %(api_url)s' % track)
+					track = {
+						'position': str(t['position']), 
+						'title' : t['recording']['title'].encode('ascii', 'ignore'),
+						'duration' : "%i:%s" % (minutes, seconds), 
+						'seconds' : time, 
+						'api_url' : url
+					}
 
-				# Fetch the youtube search results
-				ytres = feedparser.parse(url)
+					logging.info('Track #%(position)s \tDuration: %(duration)s [%(seconds)ss] \t%(title)s \tAPI URL: %(api_url)s' % track)
 
-				# Possible Youtube Sources
-				sources = []
+					# Fetch the youtube search results
+					ytres = feedparser.parse(url)
 
-				for y in ytres['entries']:
+					# Possible Youtube Sources
+					sources = []
 
-					s = y['yt_duration']['seconds']; 
-					title = y['title'].encode('ascii', 'ignore')
-					vidurl = "https://www.youtube.com/watch?v=%s" % y['yt_videoid']
+					for y in ytres['entries']:
 
-					if ( abs(int(time) - int(s)) >  10 ):
-						logging.debug('Skipping source. Duration mismatched. Wanted: %s Got: %s\t %s \t %s' % (time, s, title, vidurl) )
-						continue
-					else:
+						s = y['yt_duration']['seconds']; 
+						title = y['title'].encode('ascii', 'ignore')
+						vidurl = "https://www.youtube.com/watch?v=%s" % y['yt_videoid']
 
-						# Example fetch audio only:
-						#vid = pafy.new(vidurl)
-						#audio = vid.getbestaudio()
-						#audiofile = audio.download(filepath='/home/ephillips/tmp/')
+						if ( abs(int(time) - int(s)) >  10 ):
+							logging.debug('Skipping source. Duration mismatched. Wanted: %s Got: %s\t %s \t %s' % (time, s, title, vidurl) )
+							continue
+						else:
 
-						src = {
-							'title': title, 
-							'duration': s, 
-							'seconds': time, 
-							'hd': y['yt_hd'], 
-							'videoid': y['yt_videoid'], 
-							'url' : vidurl
-						}
+							# Example fetch audio only:
+							#vid = pafy.new(vidurl)
+							#audio = vid.getbestaudio()
+							#audiofile = audio.download(filepath='/home/ephillips/tmp/')
 
-						logging.info('Possible source found: %(duration)ss %(url)s\t %(title)s' % src )
+							src = {
+								'title': title, 
+								'duration': s, 
+								'seconds': time, 
+								'hd': y['yt_hd'], 
+								'videoid': y['yt_videoid'], 
+								'url' : vidurl
+							}
 
-						sources.append( src )
+							logging.info('Possible source found: %(duration)ss %(url)s\t %(title)s' % src )
 
-					# Valid source 
-				# Sources loop	
-				track['sources'] = sources
-				album['tracks'].append(track);
-				
-			# Tracks loop
-		# Disc loop
-		results.append(album)
-	# Album loop
+							sources.append( src )
 
-	return results
+						# Valid source 
+					# Sources loop	
+					track['sources'] = sources
+					album['tracks'].append(track);
+					
+				# Tracks loop
+			# Disc loop
+			results.append(album)
+		# Album loop
+
+		return results
 				
 # Query for Album / Artists by name
 #def findReleaseByName(name):
