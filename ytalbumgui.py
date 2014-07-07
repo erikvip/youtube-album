@@ -102,7 +102,8 @@ class YtAlbumGuiMain(QtGui.QMainWindow):
 
 		self.ytAlbum['artist'] = artist
 
- 
+
+
 
 
 
