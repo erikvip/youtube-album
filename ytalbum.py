@@ -1,17 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-__version__ = "0.1.1"
+__version__ = "0.2.1"
 __author__ = "Erik Phillips <erikvip@gmail.com>"
 __license__ = "GPLv3"
 
 
 import os
 import sys
+import traceback
 import pprint
 import logging
 import urllib
+import time
+import curses
+import atexit
 
-from PyQt4 import QtGui
+# from PyQt4 import QtGui
 
 # Ensure lib added to path, before any other imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
@@ -19,33 +23,37 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
 # Included libs
 import musicbrainzngs as mb
 import pafy
-import ytalbumgui as gui
+#import ytalbumgui as gui
 from feedparser import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(message)s')
+
+# NCurses compatible logger
+class CursesHandler(logging.Handler):
+	def emit(self, record):
+		win.addstr(1,1,"CURSES HANDLER")
+		pass
+
+ch = CursesHandler()
+logging.getLogger('root').addHandler(ch)
 
 
 def main():
+	#win.addstr(1,1,"Youtube Album Downloader")
+	win.refresh()
+
 	yta = YtAlbum()
-	yta.query = 'Aphex twin On'
+	yta.query = 'Brother Ali Truth Is'
 	res = yta.findRelease()
 
-	#print res['title']
-
-	for r in res:
-		print r['title']
-	#	pprint.pprint(r)
-	#pprint.pprint(res)
+	time.sleep(5)
 
 class YtAlbum:
-
 	def findRelease(self):
-
-		#artistlist = []
-		#artistResults = None
-
 		name = self.query
 		
+		statusUpdate("Search keywords:  " + name)
+
 		results = []
 
 		#name = 'Aphex Twin classics'
@@ -59,7 +67,6 @@ class YtAlbum:
 		res = mb.search_releases(query='artist:'+name,limit=limit)
 
 		for a in res['release-list']:
-			#print a['id'], a['title'], a['artist-credit-phrase'], a['date'], a['country'], a['status']
 			album = {
 				'id': a['id'], 
 				'artist': a['artist-credit-phrase'], 
@@ -70,16 +77,27 @@ class YtAlbum:
 				'tracks' : []
 			}
 			
-			logging.info('Found release: \n\
-				Artist: %(artist)s \n\
-				Title: %(title)s \n\
-				Album_id: %(id)s \n\
-				date: %(date)s country: %(country)s status: %(status)s' % album )
+			logging.info('\n\033[92m\033[1mFound release\033[0m \n\
+\033[1mArtist:\033[0m %(artist)s \n\
+\033[1mTitle:\033[0m %(title)s \n\
+\033[1mAlbum_id:\033[0m %(id)s \n\
+\033[1mRelease date:\033[0m %(date)s \
+\033[1mCountry:\033[0m %(country)s \033[1mStatus:\033[0m %(status)s' % album )
+
+			win.addstr(2, 1, "Artist: " + album['artist'])
+			win.addstr(3, 1, "Title: %(title)s [%(id)s]" % album )
+			win.addstr(4, 1, "Release Date: %(date)s Country: %(country)s Status: %(status)s" % album)
+			win.refresh()
 
 			disc = mb.get_release_by_id(a['id'], ["media","recordings"])
 
+			statusUpdate("Processing album %(title)s" % album)
+
+			# Startup position for cursor / curses
+			xpos = 6
+
 			for d in disc['release']['medium-list']:
-				#pprint.pprint(d)
+				
 				for t in d['track-list']:
 					# Convert recording time to Minutes:Seconds
 					time = int(t['length']) / 1000
@@ -93,17 +111,25 @@ class YtAlbum:
 
 					# Youtube Search API URL
 					url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
-					#print url
 
 					track = {
 						'position': str(t['position']), 
 						'title' : t['recording']['title'].encode('ascii', 'ignore'),
 						'duration' : "%i:%s" % (minutes, seconds), 
 						'seconds' : time, 
-						'api_url' : url
+						'api_url' : url, 
+						'query' : query
 					}
 
 					logging.info('Track #%(position)s \tDuration: %(duration)s [%(seconds)ss] \t%(title)s \tAPI URL: %(api_url)s' % track)
+
+					statusUpdate("Searching for track #%(position)s %(title)s URL: %(api_url)s" % track)
+					
+
+					win.addstr( xpos, 1, '#%(position)s Duration: %(duration)s [%(seconds)ss] %(title)s \t Query: %(query)s' % track , curses.A_UNDERLINE) 
+					#win.addstr( xpos+1, 1, 'Youtube API URL: %(api_url)s' % track , curses.color_pair(4)) 
+					win.refresh()	
+					xpos += 2
 
 					# Fetch the youtube search results
 					ytres = feedparser.parse(url)
@@ -140,6 +166,10 @@ class YtAlbum:
 
 							sources.append( src )
 
+							win.addstr( xpos, 3, '%(duration)ss - %(url)s - %(title)s' % src )
+							win.refresh()
+							xpos += 1
+
 						# Valid source 
 					# Sources loop	
 					track['sources'] = sources
@@ -148,19 +178,67 @@ class YtAlbum:
 				# Tracks loop
 			# Disc loop
 			results.append(album)
-		# Album loop
 
 		return results
 				
 # Query for Album / Artists by name
 #def findReleaseByName(name):
 
+# Exit hook function. Clean up curses bindings here
+def terminateCurses():
+	curses.nocbreak()
+	stdscr.keypad(False)
+	curses.echo()
+	curses.endwin()
 
+atexit.register(terminateCurses)
+
+# Update the status window curses box
+def statusUpdate(string):
+	winstat.addstr(1,1, string)
+	winstat.refresh()
 
 # main() when invoked from the shell
 if __name__ == '__main__':
 
-	main()
+	# Init curses
+	stdscr = curses.initscr()
+	curses.start_color()
+	curses.use_default_colors()
+	for i in range(0, curses.COLORS):
+		curses.init_pair(i + 1, i, -1)
+
+	curses.cbreak()
+	curses.noecho()
+	stdscr.keypad(1)
+
+	# Main window
+	win = curses.newwin(0,0)
+
+	# Status window
+	y, x = win.getmaxyx()
+
+	# Resize the main window so we have room for status
+	win.resize(y-3,x)
+	win.box()
+	win.refresh()
+
+	winstat = curses.newwin(3,x,y-3,0)
+	winstat.box()
+
+	winstat.refresh()
+
+	# Catch exceptions here and output them in curses
+	try:
+		main()
+		time.sleep(5000)
+	except Exception, err:
+		terminateCurses()
+ 		traceback.print_exc()
+ 		 		
+ 		sys.exit(1)
+ 
+	time.sleep(5000)
 '''
 	app = QtGui.QApplication(sys.argv)
 
