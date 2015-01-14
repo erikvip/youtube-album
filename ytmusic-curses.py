@@ -24,16 +24,6 @@ def main():
 
 	choices = u'One Two Three'.split()
 
-	main = urwid.Padding(menu(u'Pythons', choices), left=2, right=2)
-	inp =  urwid.Text(('bold', u"stuff"), 'right', 'any')
-
-	top = urwid.Overlay(main, urwid.SolidFill(u'\N{MEDIUM SHADE}'),
-	    align='center', width=('relative', 60),
-	    valign='middle', height=('relative', 60),
-	    min_width=20, min_height=9)
-
-	#urwid.MainLoop(top, palette=[('reversed', 'standout', '')]).run()
-
 	palette = [
         ('body','white','black', 'standout'),
         ('reverse','light gray','black'),
@@ -54,29 +44,19 @@ def main():
 
 	text_cb_list = [u"Abc", u"def", "asdf"]
 	text_cb_list_two = [u"Abaaa", u"bbb", "zzz"]
-	pile = urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])
-	fil = urwid.Filler(pile)
+#	pile = urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])
+#	fil = urwid.Filler(pile)
 	walker = urwid.SimpleListWalker([urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in text_cb_list])
-
-	listbox_content = [
-		#urwid.Padding(menu(u'Pythons', choices), left=2, right=2),
-		#urwid.Padding(urwid.Text(text_listbox), left=0, right=0, min_width=20),
-		#urwid.Padding(urwid.GridFlow([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list],10, 0, 1, 'left') ,left=4, right=3, min_width=10),
-		#urwid.Filler(urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])),
 		#urwid.BoxAdapter(urwid.Filler(urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])), 10),
-		#urwid.BoxAdapter(fil, 10),
 		urwid.BoxAdapter(
 				urwid.ListBox(
 					walker
 		), 3),
-
-		#urwid.BoxAdapter(urwid.Filler(urwid.Padding(PopUpDialog(), 'center', 15)), 5),
 		urwid.AttrWrap(urwid.Edit("", "wtf", align='left'), 'editbx', 'editfc' ),
 	]
-
+	logging.info("wtf")
 	head = urwid.Text(text_header)
 	header = urwid.AttrWrap(head, 'header')
-	#header = urwid.Columns([head])
 	listbox = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
 	frame = urwid.Frame(urwid.AttrWrap(listbox, 'body'), header=header)	
 
@@ -92,11 +72,7 @@ def main():
 			walker[:] = [urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in text_cb_list_two] 
 		if key == "f6":
 			walker[:] = []
-			#p = PopUpDialog()
-			#p.create_pop_up()
-			#p = ThingWithAPopUp()
-			#p.create_pop_up()
-			#header[:] = [urwid.AttrMap(urwid.Text('asdfasdf'), 'buttn', 'buttnf')] 
+
 		head.set_text("Key pressed: %s" % key)
 
 
@@ -106,56 +82,6 @@ def main():
 		unhandled_input=unhandled, pop_ups=True).run()
 
 
-class PopUpDialog(urwid.WidgetWrap):
-    """A dialog that appears with nothing but a close button """
-    signals = ['close']
-    def __init__(self):
-        close_button = urwid.Button("that's pretty cool")
-        urwid.connect_signal(close_button, 'click',
-            lambda button:self._emit("close"))
-        pile = urwid.Pile([urwid.Text(
-            "^^  I'm attached to the widget that opened me. "
-            "Try resizing the window!\n"), close_button])
-        fill = urwid.Filler(pile)
-        self.__super.__init__(urwid.AttrWrap(fill, 'popbg'))
-
-
-class ThingWithAPopUp(urwid.PopUpLauncher):
-    def __init__(self):
-        self.__super.__init__(urwid.Button("click-me"))
-        urwid.connect_signal(self.original_widget, 'click',
-            lambda button: self.open_pop_up())
-
-    def create_pop_up(self):
-        pop_up = PopUpDialog()
-        urwid.connect_signal(pop_up, 'close',
-            lambda button: self.close_pop_up())
-        return pop_up
-
-    def get_pop_up_parameters(self):
-        return {'left':0, 'top':1, 'overlay_width':32, 'overlay_height':7}
-
-
-
-def menu(title, choices):
-    body = [urwid.Text(title), urwid.Divider()]
-    for c in choices:
-        button = urwid.Button(c)
-        urwid.connect_signal(button, 'click', item_chosen, c)
-        body.append(urwid.AttrMap(button, None, focus_map='reversed'))
-    return urwid.ListBox(urwid.SimpleFocusListWalker(body))
-
-def item_chosen(button, choice):
-	print(choice)	
-    #response = urwid.Text([u'You chose ', choice, u'\n'])
-    #done = urwid.Button(u'Ok')
-    #urwid.connect_signal(done, 'click', wtf)
-    #main.original_widget = urwid.Filler(urwid.Pile([response,
-     #   urwid.AttrMap(done, None, focus_map='reversed')]))
-
-
-def wtf():
-	print("wtf")
 
 
 # NCurses compatible logger
