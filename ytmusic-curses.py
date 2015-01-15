@@ -15,16 +15,31 @@ import atexit
 import urwid
 import urwid.raw_display
 import urwid.web_display
+import nobsmusicbrainzapi as mbapi
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
 def main():
 	# Main handler
 
-	choices = u'One Two Three'.split()
+	logging.getLogger('').handlers = []
+	logging.basicConfig(
+		level=logging.INFO, 
+		#format='%(asctime)s %(message)s',
+		filename="/tmp/ytmusic.log", 
+		filemode="a"
+	)
+	log = logging.getLogger("ytmusic-curses")
+	log.info("Started logging")
+
+
+	# Music Brainz search api
+	mb = mbapi.nobsmusicbrainzapi()
 
 	palette = [
         ('body','white','black', 'standout'),
+
+		('listbox', 'white', 'dark blue'),
+        ('infobox', 'white', 'dark green'),
         ('reverse','light gray','black'),
         ('header','black','light green', 'bold'),
         ('important','dark blue','light gray',('standout','underline')),
@@ -45,20 +60,40 @@ def main():
 	text_cb_list_two = [u"Abaaa", u"bbb", "zzz"]
 #	pile = urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])
 #	fil = urwid.Filler(pile)
-	walker = urwid.SimpleListWalker([urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in text_cb_list])
+
+	#walker = urwid.SimpleListWalker([urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in text_cb_list])
+	walker = urwid.SimpleListWalker([])
+	
+
+	search = urwid.Edit("Artist Search: ", "", align='left')
+	#urwid.connect_signal(search, 'change', handleSearch)
+	
+	infobox = urwid.LineBox(urwid.Text("asdf"))
+	listbox = urwid.BoxAdapter(urwid.AttrWrap(urwid.ListBox(walker), 'listbox'),10)
+
+	#columns = urwid.Columns([listbox, (0,infobox) ])
+	columns = urwid.Columns([listbox])
+
 	listbox_content = [
 		#urwid.BoxAdapter(urwid.Filler(urwid.Pile([urwid.AttrWrap(urwid.CheckBox(txt),'buttn','buttnf') for txt in text_cb_list])), 10),
-		urwid.BoxAdapter(
-				urwid.ListBox(
-					walker
-		), 3),
-		urwid.AttrWrap(urwid.Edit("", "wtf", align='left'), 'editbx', 'editfc' ),
+		#urwid.BoxAdapter(urwid.ListBox(walker), 10),
+		#urwid.Columns([
+			#urwid.BoxAdapter(urwid.ListBox(walker), 10), 
+			
+	#		urwid.AttrWrap(infobox, 'infobox'),
+		#]),
+		#listbox,
+		columns,
+		urwid.AttrWrap(search, 'editbx', 'editfc' ),
 	]
 	
 	head = urwid.Text(text_header)
 	header = urwid.AttrWrap(head, 'header')
-	listbox = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
-	frame = urwid.Frame(urwid.AttrWrap(listbox, 'body'), header=header)	
+	
+	container = urwid.ListBox(urwid.SimpleListWalker(listbox_content))
+
+
+	frame = urwid.Frame(urwid.AttrWrap(container, 'body'), header=header)	
 
 
 	if urwid.web_display.is_web_request():
@@ -66,16 +101,76 @@ def main():
 	else:
 		screen = urwid.raw_display.Screen()
 
+	def album_selected(button):
+		logging.info("Album selected: %s" % button)
+		album = button.album
+		head.set_text("Album: %s" % album['title'])
+
+
+	def artist_selected(button):
+		arid = button.arid
+		name = button.name
+		logging.info("Item selected = %s, arid = %s, name = %s" % (button, arid, name))
+		# Now do an album search 
+		albums = mb.search_album(arid=arid)
+		logging.info("Album search results: %s" % albums)
+
+		head.set_text("Showing albums by %s" % name)
+
+		items = []
+		for a in albums:
+			button = urwid.Button(a['name'])
+			button.album = a
+			urwid.connect_signal(button, 'click', album_selected)
+			items.append(urwid.AttrMap(button, 'buttn', 'buttnf'))
+
+			#items.append(a['title'])
+		#walker[:] = [urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in items] 
+		walker[:] = items
+
+
+
 	def unhandled(key):
+		logging.info("Key press: %s" % key)
 		if key == 'f8':
 			raise urwid.ExitMainLoop()
 		if key == "f7":
 			walker[:] = [urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in text_cb_list_two] 
 		if key == "f6":
-			walker[:] = []
 
-		#head.set_text("Key pressed: %s" % key)
+			w = columns._get_widget_list()
+
+			#log.info("Columns widget list: %s" % w)
+			if ( len(w) == 1 ):
+				columns._set_widget_list([ listbox, infobox ])
+			else:
+				columns._set_widget_list([ listbox ])
+
+		if key == "enter":
+#			from pudb import set_trace; set_trace()
+
+			queryString = search.edit_text
+			log.info("Search queryString: %s" % queryString)
+
+			if len(queryString) > 0:
+				head.set_text("Artist search for: %s" % queryString)
+				artists = mb.search_artist(queryString)
+				log.info("Search results: %s" % artists)
+
+				items = []
+				for a in artists:
+					button = urwid.Button(a['name'])
+					button.arid = a['arid']
+					button.name = a['name']
+					urwid.connect_signal(button, 'click', artist_selected)
+					items.append(urwid.AttrMap(button, 'buttn', 'buttnf'))
+
+
+				#walker[:] = [urwid.AttrMap(urwid.Button(w), 'buttn', 'buttnf') for w in items] 
+				walker[:] = items
 		
+
+	
 
 
 
