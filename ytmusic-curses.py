@@ -38,8 +38,12 @@ def main():
 	palette = [
         ('body','white','black', 'standout'),
 
-		('listbox', 'white', 'dark blue'),
-        ('infobox', 'white', 'dark green'),
+#		('listbox', 'white', 'dark blue'),
+#        ('infobox', 'white', 'dark green'),
+
+		('listbox', 'white', 'black'),
+        ('infobox', 'white', 'black'),
+
         ('reverse','light gray','black'),
         ('header','black','light green', 'bold'),
         ('important','dark blue','light gray',('standout','underline')),
@@ -68,7 +72,8 @@ def main():
 	search = urwid.Edit("Artist Search: ", "", align='left')
 	#urwid.connect_signal(search, 'change', handleSearch)
 	
-	infobox = urwid.LineBox(urwid.Text("asdf"))
+	#infobox = urwid.LineBox(urwid.Text("asdf"))
+	infobox = urwid.BoxAdapter(urwid.AttrWrap(urwid.LineBox(urwid.ListBox( [urwid.Text("Asdf")]  )), 'infobox'),10)
 	listbox = urwid.BoxAdapter(urwid.AttrWrap(urwid.ListBox(walker), 'listbox'),10)
 
 	#columns = urwid.Columns([listbox, (0,infobox) ])
@@ -102,9 +107,14 @@ def main():
 		screen = urwid.raw_display.Screen()
 
 	def album_selected(button):
-		logging.info("Album selected: %s" % button)
 		album = button.album
+		logging.info("Album selected: %s" % album)
 		head.set_text("Album: %s" % album['title'])
+
+		tracks = mb.get_album(album['aid'])
+		logging.info("Track search results: %s" % tracks)
+
+
 
 
 	def artist_selected(button):
@@ -119,7 +129,7 @@ def main():
 
 		items = []
 		for a in albums:
-			button = urwid.Button(a['name'])
+			button = urwid.Button(a['title'])
 			button.album = a
 			urwid.connect_signal(button, 'click', album_selected)
 			items.append(urwid.AttrMap(button, 'buttn', 'buttnf'))
