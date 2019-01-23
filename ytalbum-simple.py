@@ -54,7 +54,8 @@ def utf8_decode(x):
 def main():
 
 	yta = YtAlbum()
-	yta.query = 'Anjali - Anjali'
+	#yta.query = 'Anjali - Anjali'
+	yta.query = "tracy bonham - the burdens of being upright"
 	res = yta.findRelease()
 
 #	time.sleep(5)
@@ -123,7 +124,7 @@ class YtAlbum:
 					# Cover art
 					#coverartarchive.org/release/95069c41-9f93-4473-a4a7-8722f14fb2c4/back
 
-					print "  Disc #%s Track #%s %s" % ( d['position'], t['position'], t['recording']['title'] )
+					print "  Disc #%s Track #%s %s" % ( d['position'], t['position'], t['recording']['title'].encode('ascii', 'ignore') )
 
 					query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
 
@@ -144,7 +145,7 @@ class YtAlbum:
 						} )
 
 
-					print url
+					#print url
 					
 #					opener = urllib.request.build_opener()
 #					pprint(opener)
@@ -164,21 +165,25 @@ class YtAlbum:
 
 
 
-					sys.exit(1);
 
 					#sys.exit(1)
 					#data = ET.fromstring(utf8_encode(resp))
 
 					data = json.loads(resp)
 
-					#pprint(data)
-					for v in data['items']:
-						#pprint(v)
-						#sys.exit(1)
-						if v['id']['kind'] == 'youtube#video':
-							#pprint(v)
+					id=data["items"][0]['id']['videoId']
+					title=data["items"][0]['snippet']['title'].encode('ascii', 'ignore')
+					print "%s %s" % (id, title)
 
-							print "    %s - %s" % (v['id']['videoId'], v['snippet']['title'])
+					print "https://www.youtube.com/watch?v=%s" % (id)
+					#pprint(data)
+#					for v in data['items']:
+#						if v['id']['kind'] == 'youtube#video':
+#							print "    %s - %s" % (v['id']['videoId'], v['snippet']['title'])
+
+
+
+
 
 #					track = {
 #						'position': str(t['position']), 
