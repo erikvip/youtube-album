@@ -106,7 +106,8 @@ class YtAlbum:
 
 					logging.info("  Disc #%s Track #%s %s" % ( d['position'], t['position'], t['recording']['title'].encode('ascii', 'ignore') ))
 
-					query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
+#					query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
+					query = '%s %s' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
 					logging.info("Youtube search query: %s" % query)
 
 					# Youtube Search API URL
@@ -129,12 +130,23 @@ class YtAlbum:
 						logging.error("Download failed. HTTP Error %s %s" % (err.code, err.msg))
 						print(err.code)
 						print err.msg
-						sys.exit(1)					
+						sys.exit(1)
 
 					data = json.loads(resp)
+					id = 0
+					for v in data['items']:
+						if v['id']['kind'] == 'youtube#video':
+							id=v['id']['videoId']
+							title=v['snippet']['title'].encode('ascii', 'ignore')
+							break
 
-					id=data["items"][0]['id']['videoId']
-					title=data["items"][0]['snippet']['title'].encode('ascii', 'ignore')
+					if id == 0:
+						logging.error("No matching video found")
+						pprint(data)
+						sys.exit(1)
+
+					#id=data["items"][0]['id']['videoId']
+					#title=data["items"][0]['snippet']['title'].encode('ascii', 'ignore')
 					print "%s %s" % (id, title)
 
 					print "https://www.youtube.com/watch?v=%s" % (id)
@@ -149,6 +161,9 @@ class YtAlbum:
 # main() when invoked from the shell
 if __name__ == '__main__':
 	
+
+#	logging.getLogger().setLevel(logging.DEBUG);
+
 	if len(sys.argv) <= 1 or sys.argv[1] is None: 
 		logging.error("Must specify Artist / Album search keyword");
 		sys.exit(1)
