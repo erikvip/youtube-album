@@ -110,10 +110,7 @@ class YtAlbum:
 					query = '"%s" "%s"' % ( album['artist'], t['recording']['title'].encode('ascii', 'ignore') )
 
 					# Youtube Search API URL
-#					url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
-#					AIzaSyCCY9n5yMzLOEbkIldSTvpJ4Wb5hvoqcsk
-#					url = 'https://www.googleapis.com/youtube/v3/search?q=%s&v=2&hd=true' % urllib.quote_plus(query)
-					url = 'https://www.googleapis.com/youtube/v3/search?q={query}&key=AIzaSyCCY9n5yMzLOEbkIldSTvpJ4Wb5hvoqcsk&part=snippet' % urllib.quote_plus(query)
+					url = 'https://gdata.youtube.com/feeds/api/videos?q=%s&v=2&hd=true' % urllib.quote_plus(query)
 
 					track = {
 						'position': str(t['position']), 
