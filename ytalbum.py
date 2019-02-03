@@ -1,5 +1,28 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+Assemble and download mp3 albums from individual youtube videos
+
+Usage:
+	ytalbum.py [-id] COMMAND SEARCHKEYWORD
+
+Depending on COMMAND, this will Search for albums by an artist, List the youtube URLS for each album track, or Download each track using youtube-dl
+
+Arguments:
+	COMMAND 		Search, List, or Download
+	SEARCHKEYWORD 		The Artist+Album, or just Artist search string
+
+Options:
+  -i		Interactive mode
+  -d 		Enable debug logging
+  -h, --help 		Show help
+"""
+
+#Assemble and download mp3 albums from individual youtube videos
+
+#Depending on COMMAND, this will Search for albums by an artist, List the youtube URLS for each album track, or Download each track using youtube-dl
+
+
 __version__ = "0.2.1"
 __author__ = "Erik Phillips <erikvip@gmail.com>"
 __license__ = "GPLv3"
@@ -12,7 +35,8 @@ import logging
 import urllib
 import time
 
-
+#from docopt import docopt
+import argparse
 #from urllib2 import build_opener
 from urllib2 import build_opener, HTTPError, URLError
 uni, byt, xinput = unicode, str, raw_input
@@ -25,7 +49,14 @@ import atexit
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib/'))
 
 # Included libs
+import shelve
 import musicbrainzngs as mb
+import musicbrainzngs.cache
+
+cache = musicbrainzngs.cache.DictCache()
+musicbrainzngs.set_cache(cache)
+
+
 #import pafy
 #import ytalbumgui as gui
 #from feedparser import *
@@ -47,11 +78,42 @@ def utf8_decode(x):
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(message)s')
 
 
-def main(searchKeyword):
+def mainold(action, searchKeyword):
 	yta = YtAlbum()
 	#yta.query = 'Anjali - Anjali'
 	yta.query = searchKeyword
-	res = yta.findRelease()
+	#res = yta.findRelease()
+
+
+def main(args):
+	yta =YtAlbum()
+
+	r = yta.listArtists('Guns and roses');
+	pprint(r)
+	sys.exit(1)
+
+	artist = yta.listArtists(args.artist, 1)[0]
+	if args.action=='list':
+		res = mb.search_releases(query=args.album, artistname=args.artist, country='US', limit=20)
+		yta.showReleaseList(res['release-list'])
+
+	elif args.action=='search':
+		# Artist search
+		if args.album == None:
+			res = yta.listArtists(args.artist)
+		else:
+			res = mb.search_releases(query=args.album, artistname=args.artist, limit=20)	
+			yta.showReleaseList(res['release-list'])
+
+
+#	yta.listReleasesByArtist(artist)	
+	res = mb.search_releases(query=args.album, artistname=args.artist, limit=1)
+	#res = yta.showReleaseList(res['release-list'])
+#	pprint(res)
+	#res = mb.get_release_by_id()
+	disc = mb.get_release_by_id(res['release-list'][0]['id'], ["media","recordings"])
+	#disc = mb.get_release_by_id(res['release-list'][0]['id'], ["media"])
+#	pprint(disc)
 
 class YtAlbum:
 	def __init__(self):
@@ -61,6 +123,56 @@ class YtAlbum:
 		ua += "Trident/5.0)"
 		opener.addheaders = [("User-Agent", ua)]
 		self.urlopen = opener.open
+
+		mb.set_useragent("YtAlbum","0.0","https://youtube.com")
+
+	def search_releases(self, query, limit=10):
+		res = mb.search_releases(query=query, limit=limit)
+		return res
+	def search_release_groups(self, query, limit=10):
+		res = mb.search_release_groups (query=query, limit=limit)
+		return res
+
+
+	def get_release_by_id(self, id):
+		disc = mb.get_release_by_id(id, ["media","recordings"])
+		return disc
+
+	def get_release_group_by_id(self, id):
+		disc = mb.get_release_group_by_id(id, ["media","recordings"])
+		return disc
+
+
+	def showReleaseList(self, releaseList):
+		for b in releaseList:
+			c=dict(b)
+			if not c.has_key('country'): c['country']='N / A'
+			if not c.has_key('date'): c['date']='Unknown'
+			c['title'] = c['title'].encode('ascii', 'ignore')
+		
+			try:
+				print ("%(artist-credit-phrase)s"
+					+" - %(title)s [%(country)s]"
+					+" [%(date)s] Discs:%(medium-count)s") % c
+			except KeyError:
+				pprint(c);
+				sys.exit(1)
+
+
+	def listArtists(self, artist, limit=10):
+		logging.info("Getting artist list for keyword: %s" % artist)
+		res=mb.search_artists(query=artist, limit=limit)
+		for a in res['artist-list']:
+			logging.debug("Found artist: %(name)s" % a)
+
+		return res['artist-list']
+
+	def listReleasesByArtist(self, artist, limit=20):
+		logging.info("Getting release list for artist %(name)s, id:%(id)s " % artist)
+		res = mb.search_releases(arid=artist['id'], limit=limit)
+		for b in res['release-list']:
+			logging.debug("Found release: %(title)s" % b)
+		return res['release-list']
 
 	def findRelease(self):
 		name = self.query
@@ -76,6 +188,8 @@ class YtAlbum:
 		    
 		mb.set_useragent("YtAlbum","0.0","https://youtube.com")
 		res = mb.search_releases(query='artist:'+name,limit=limit)
+		pprint(res)
+		sys.exit(1)
 
 		for a in res['release-list']:
 			album = {
@@ -88,7 +202,8 @@ class YtAlbum:
 				'tracks' : []
 			}
 
-			print "Artist: %(artist)s Album: %(title)s  Release Date: %(date)s" % (album)
+			#print "Artist: %(artist)s Album: %(title)s  Release Date: %(date)s" % (album)
+			logging.info("Artist: %(artist)s Album: %(title)s  Release Date: %(date)s" % (album))
 
 			disc = mb.get_release_by_id(a['id'], ["media","recordings"])
 
@@ -160,12 +275,24 @@ class YtAlbum:
 
 # main() when invoked from the shell
 if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('action', choices=['search', 'list', 'download'], 
+		help="The action to take (e.g. search, list, download)")
+	parser.add_argument('artist',  help='Artist Search Keyword')
+	parser.add_argument('album',  help='Artist Search Keyword')
+
+
+	parser.add_argument('-i', '--interactive', action='store_true')
+	parser.add_argument('-d', '--debug', action='store_true')
+
+
+	args = parser.parse_args()
+
+	if args.debug == True:
+		logging.getLogger().setLevel(logging.DEBUG);
+
+	logging.debug(args)
 	
-
-#	logging.getLogger().setLevel(logging.DEBUG);
-
-	if len(sys.argv) <= 1 or sys.argv[1] is None: 
-		logging.error("Must specify Artist / Album search keyword");
-		sys.exit(1)
-
-	main(sys.argv[1])
+	#main(args.action, args.keyword)
+	main(args)
