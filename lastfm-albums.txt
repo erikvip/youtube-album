@@ -1,0 +1,3 @@
+ wget -O - https://www.last.fm/player/station/music/Aphex+Twin/Classics | jq '.playlist[] | .name  + .playlinks[0] .url'
+wget -O - https://www.last.fm/player/station/music/Primus/Frizzle+Fry | jq '.playlist[] | .name  + .playlinks[0] .url'
+wget -O - https://www.last.fm/player/station/music/Underworld/Dubnobasswithmyheadman | jq '.playlist[] | .name  + .playlinks[0] .url'

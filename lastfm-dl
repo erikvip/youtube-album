@@ -1,0 +1,113 @@
+#!/bin/bash 
+
+# Download full albums from lastfm
+BASE_URL="https://www.last.fm/player/station/music"
+
+if [[ "$1" = ${BASE_URL}* ]]; then
+	_URL="$1";
+	_artist=$(echo -n "${_URL}" | cut -d '/' -f7);
+	_album=$(echo -n "${_URL}" | cut -d '/' -f8);
+else
+	_artist="$1"; 
+	_album="$2";
+	_URL="${BASE_URL}/${_artist}/${_album}"
+fi
+urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
+filename_safe() { 
+	_ret=$(echo "$*" | sed -E 's/[^[:alnum:][:space:]\.\-\(\)\[\]]+/_/g');
+	echo ${_ret}
+}
+
+
+_artist=$(urldecode "${_artist}");
+_album=$(urldecode "${_album}");
+
+
+tput bold
+echo "Last.FM Album downloader"
+tput sgr0
+echo "Artist: $_artist Album: $_album"
+echo "Source: $_URL"
+echo
+
+
+[ -z "${_album}" ] && echo "Must specify album. Download all by artist is not implemented yet." && exit 1
+# Make params global
+_title=""
+_track=0
+_yturl=""
+_errors_detected=0
+odir="${_artist} - ${_album}"
+
+trap exit INT
+
+main() {
+	IFS=$'\n'
+	_count=0; 
+	for i in $(wget --quiet -O - "${_URL}" | jq -rj '.playlist[] | {"title":.name  , "url":.playlinks[0] .url}' | jq -r '.url+.title'); do
+		_count=$(( $_count + 1 ));
+		_yturl=${i:0:43};
+		_title=${i:43};
+		_track=$(printf "%02d" "${_count}");
+		ytDownload
+	done
+	
+	if [ ${_errors_detected} -gt 0 ]; then
+		#mv "${odir}/" "${odir}-(ERRORS)/"
+		tput setaf 1
+		echo "Download completed with errors:"
+		tput sgr0
+		echo "Some files might not have downloaded or converted correctly."
+		echo "Check the error.log file for more information"
+		echo "Error count: ${_errors_detected}"
+
+		#echo -n "Folder has been renamed to "; tput setaf 2; tput bold; echo "${odir}-(ERRORS)/"
+	else
+		tput setaf 2
+		echo "Successfully downloaded ${_artist} - ${_album}"; 
+	fi
+	tput sgr0
+}
+
+ytDownload() {
+	tput bold
+	echo "Preparing to download ${_yturl}"
+	tput sgr0
+
+#	odir="${_artist} - ${_album}"
+	if [ ! -d "$odir" ]; then
+		mkdir "$odir"
+	fi
+	
+	oTemplate="${odir}/${_track} - %(title)s-%(id)s.%(ext)s";
+	dstFile=$(youtube-dl -x --restrict-filenames --audio-format mp3 --output "${oTemplate}" --get-filename "${_yturl}");
+
+	# God forsaken file extension!
+	dstFile="${dstFile%.*}.mp3"
+
+	if [ -e "${dstFile}" ]; then
+		echo "Skipping existing file: ${dstFile}"
+	else
+		echo "Downloading ${dstFile}";
+		youtube-dl -x \
+			--audio-format mp3  \
+			--output "${oTemplate}" \
+			--restrict-filenames \
+			--postprocessor-args "-metadata artist='${_artist}' -metadata album='${_album}' -metadata title='${_title}' -metadata track='${_track}'" \
+			"${_yturl}" 2>> "${odir}/error.log"
+		if [ $? -ne 0 ]; then
+			tput setaf 3
+			echo -n "WARNING: "; tput sgr0; echo "Errors detected during download or post processing phase."
+			echo "File may not have been downloaded correctly"; 
+			echo -e "Errors: \n\tURL: ${_yturl}\n\tFile: $(basename ${dstFile})" >> "${odir}/error.log"; 
+			_errors_detected=$(( $_errors_detected + 1 ));
+		fi
+	fi
+	echo
+}
+
+
+
+main
+
+
