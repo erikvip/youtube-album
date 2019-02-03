@@ -5,9 +5,19 @@ import io
 import sys
 from ytalbum import YtAlbum
 import md5
+import logging
+logging.basicConfig(filename="tuidebug.log", level=logging.DEBUG, format='%(asctime)s %(message)s')
+
+#logging.basicConfig(logging.WARNING)
+
 
 class ArtistSearchList(npyscreen.MultiLineAction):
     pass
+
+class ArtistTitleText(npyscreen.TitleText):
+    def edit(self):
+        super(ArtistTitleText, self).edit()
+
 
 class YoutubeAlbumTui(npyscreen.NPSApp):
     selectedArtist=""
@@ -20,18 +30,26 @@ class YoutubeAlbumTui(npyscreen.NPSApp):
     def __init__(self, *args, **keywords):
         super(YoutubeAlbumTui, self).__init__()
         self.yta = YtAlbum()
+       # logging.getLogger().setLevel(logging.INFO);
 
     def msg(self, msg):
         npyscreen.notify_confirm(msg, wide=True);
 
     def ArtistSearch(self):
+
         if self.txtArtist.value == "":
             return;
 
         self.searchMode='artist'
+
+        #Reset the search button so we can search again
+        self.btnArtist.value=False
+        self.btnArtist.update()
+
         artists = self.yta.listArtists(self.txtArtist.value)
         self.mainList.values = []
         self.artistList = {}
+
 
         for a in artists:
             self.mainList.values.append(a['name'].encode('ascii', 'ignore'))
@@ -46,7 +64,7 @@ class YoutubeAlbumTui(npyscreen.NPSApp):
     def LoadArtist(self, act_on_this):
         self.txtArtist.value=act_on_this
         self.selectedAlbum=act_on_this
-        self.txtArtist.set_editable(False)
+        #self.txtArtist.set_editable(False)
         self.txtArtist.update()
         key = md5.new(act_on_this).digest()
         artist = self.artistList[key]
@@ -55,13 +73,31 @@ class YoutubeAlbumTui(npyscreen.NPSApp):
         albums = self.yta.search_releases("arid:"+artist['id'], 100)
         self.mainList.values = []
         for a in albums['release-list']:
-            self.mainList.values.append(a['title'].encode('ascii', 'ignore'))
-            key = md5.new(a['title'].encode('ascii','ignore')).digest()
+            try:
+                atype = a['release-group']['type']
+            except:
+                atype = ""
+
+            try:
+                country = a['country']
+            except:
+                country = ""
+
+            title =  a['title'].encode('ascii', 'ignore') + ' (' + atype + ') [' + country + ']'
+            self.mainList.values.append(title)
+            key = md5.new(title).digest()
             self.albumList[key] = a;
+
+
+#            self.mainList.values.append(a['title'].encode('ascii', 'ignore'))
+ #           key = md5.new(a['title'].encode('ascii','ignore')).digest()
+  #          self.albumList[key] = a;
+
             #self.albumList[a['title']] = a;
 
         self.mainList.update()
         self.searchMode='album'
+
 
     def LoadAlbum(self, act_on_this):
         self.txtAlbum.value=act_on_this
@@ -80,7 +116,9 @@ class YoutubeAlbumTui(npyscreen.NPSApp):
                 tracks.append(title)
 
         self.mainListBox.set_values(tracks)
+        #title = act_on_this + ' ' + rel['release']['country']
         self.mainListBox.name=act_on_this
+        self.mainListBox.name=title
         self.mainListBox.footer="Discs: %s Tracks: %s" % (disc_count, len(tracks))
         self.mainListBox.update()
 
@@ -91,14 +129,17 @@ class YoutubeAlbumTui(npyscreen.NPSApp):
     def main(self):
         F  = npyscreen.Form(name = "Youtube Album Downloader",)
 
-        self.txtArtist  = F.add(npyscreen.TitleText, name = "Artist:", max_width=40, rely=2)
-        btnArtist = F.add(npyscreen.MiniButton, name="Artist Search", rely = 2, relx = 50)
-        btnArtist.whenToggled = self.ArtistSearch
+        #self.txtArtist  = F.add(npyscreen.TitleText, name = "Artist:", max_width=40, rely=2)
+        self.txtArtist  = F.add(ArtistTitleText, name = "Artist:", max_width=40, rely=2)
+        
+
+        self.btnArtist = F.add(npyscreen.MiniButton, name="Artist Search", rely = 2, relx = 50)
+        self.btnArtist.whenToggled = self.ArtistSearch
 
         self.txtAlbum  = F.add(npyscreen.TitleText, name = "Album:", max_width=40, rely=3, editable = False)
 
-        self.mainList = F.add(ArtistSearchList, max_width=35, max_height=12, rely=6, select_exit=True)
-        self.mainListBox = F.add(npyscreen.BoxTitle, name = "", max_width=40, max_height=13, rely=6, relx=50)      
+        self.mainList = F.add(ArtistSearchList, max_width=45, max_height=12, rely=6, select_exit=True, exit_right=True)
+        self.mainListBox = F.add(npyscreen.BoxTitle, name = "", max_width=40, max_height=13, rely=6, relx=50, exit_left=True)      
 
 
         def mainListSelect(act_on_this, keypress):
