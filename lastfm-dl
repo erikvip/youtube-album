@@ -3,15 +3,9 @@
 # Download full albums from lastfm
 BASE_URL="https://www.last.fm/player/station/music"
 
-if [[ "$1" = ${BASE_URL}* ]]; then
-	_URL="$1";
-	_artist=$(echo -n "${_URL}" | cut -d '/' -f7);
-	_album=$(echo -n "${_URL}" | cut -d '/' -f8);
-else
-	_artist="$1"; 
-	_album="$2";
-	_URL="${BASE_URL}/${_artist}/${_album}"
-fi
+# Album list:
+# https://www.last.fm/music/ARTIST/artial/albums
+
 urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
 filename_safe() { 
 	_ret=$(echo "$*" | sed -E 's/[^[:alnum:][:space:]\.\-\(\)\[\]]+/_/g');
@@ -19,25 +13,44 @@ filename_safe() {
 }
 
 
-_artist=$(urldecode "${_artist}");
-_album=$(urldecode "${_album}");
+setup() { 
+	if [[ "$1" = ${BASE_URL}* ]]; then
+		_URL="$1";
+		_artist=$(echo -n "${_URL}" | cut -d '/' -f7);
+		_album=$(echo -n "${_URL}" | cut -d '/' -f8);
+	else
+		_artist="$1"; 
+		_album="$2";
+		_URL="${BASE_URL}/${_artist}/${_album}"
+	fi
 
 
-tput bold
-echo "Last.FM Album downloader"
-tput sgr0
-echo "Artist: $_artist Album: $_album"
-echo "Source: $_URL"
-echo
+	_artist=$(urldecode "${_artist}");
+	_album=$(urldecode "${_album}");
 
 
-[ -z "${_album}" ] && echo "Must specify album. Download all by artist is not implemented yet." && exit 1
-# Make params global
-_title=""
-_track=0
-_yturl=""
-_errors_detected=0
-odir="${_artist} - ${_album}"
+	tput bold
+	echo "Last.FM Album downloader"
+	tput sgr0
+	echo "Artist: $_artist Album: $_album"
+	echo "Source: $_URL"
+	echo
+
+
+	if [ -z "${_album}" ]; then
+		# && echo "Must specify album. Download all by artist is not implemented yet." && exit 1
+		albumList
+		exit 0
+	fi
+
+	# Make params global
+	_title=""
+	_track=0
+	_yturl=""
+	_errors_detected=0
+	odir="${_artist} - ${_album}"
+}
+
 
 trap exit INT
 
@@ -106,8 +119,35 @@ ytDownload() {
 	echo
 }
 
+albumList() {
+	local _album_url="https://www.last.fm/music/${_artist}/+partial/albums";
+	echo "Gathering most popular album list from ${_album_url}"; 
+	OFS=$IFS; IFS=$'\n';
+	for album in $(wget -O - --quiet "${_album_url}" | \
+		grep -v '^$' | tr -d "\n" | sed 's/  */ /g' | \
+		egrep -o '..itemprop="album".*' | \
+		sed -E 's/..itemprop="album" >/\
+ /g' | sed -E 's/^.*?<a href="([^"]*?)" itemprop="url" [^>]*?>([^>]*?)<.*?aux-text"> ([^<]*) .*$/\1\t\2\t\3/g');
+	do
+		aurl=$(echo $album | cut -f1); 
+		atitle=$(echo $album | cut -f2); 
+		ainfo=$(echo $album | cut -f3); 
+		printf '%-30s %s\n' "$atitle" "$ainfo"
+	done
 
 
+
+
+
+#cat lalbums.tmp | grep -v '^$' | tr -d "\n" | sed 's/  */ /g' | sed 's/itemprop="album" >/\
+#NEWLINEHERE /g' | sed -E 's/^.*?<a href=("[^"]*?") itemprop="url" .*?aux-text"> ([^<]*) .*$/\1 \2/g'
+
+
+	
+}
+
+
+setup $@
 main
 
 
